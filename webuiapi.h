@@ -37,6 +37,9 @@ void webui_init();
 /* Returns a linked list to all the current torrents */
 torrent_info *webui_get_torrents();
 
+/* Frees a linked list of torrent_info */
+void webui_free_torrent_info(torrent_info *torrents);
+
 /* Returns a linked list of completed torrents. NULL if there are none */
 torrent_info *webui_completed_torrents(torrent_info *current, torrent_info *last);
 

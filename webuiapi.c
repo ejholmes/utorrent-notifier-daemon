@@ -10,6 +10,8 @@
 
 #define DBG(...) fprintf(stderr, __VA_ARGS__)
 
+#define FIELD(string, i) json_object_get_##string(json_object_array_get_idx(index, i))
+
 /* Global struct for holding configuration information */
 static struct {
     char *uri;
@@ -76,17 +78,84 @@ torrent_info *webui_new_torrents(torrent_info *current, torrent_info *last)
 torrent_info *webui_get_torrents()
 {
     char *json;
-    torrent_info *torrents = (torrent_info *)malloc(sizeof(torrent_info));
-    torrents->next = NULL;
+    torrent_info *head = NULL, *last = NULL;
 
     curl_easy_setopt(connection, CURLOPT_URL, build_url(2, "/?list=1&token=", token));
     curl_easy_setopt(connection, CURLOPT_WRITEFUNCTION, get_torrents_write_func);
     curl_easy_setopt(connection, CURLOPT_WRITEDATA, &json);
     perform_request();
 
-    // TODO: Parse JSON
+    struct json_object *obj;
+    obj = json_tokener_parse(json);
+    obj = json_object_object_get(obj, "torrents");
 
-    return torrents;
+    int i;
+    for (i = 0; i < json_object_array_length(obj); i++) {
+        json_object *index = json_object_array_get_idx(obj, i);
+        torrent_info *torrent = (torrent_info *)malloc(sizeof(torrent_info));
+
+        torrent->hash                   = (char *)FIELD(string, 0);
+        torrent->status                 =         FIELD(int, 1);
+        torrent->name                   = (char *)FIELD(string, 2);
+        torrent->size                   =         FIELD(double, 3);
+        torrent->percent_progress       =         FIELD(int, 4);
+        torrent->downloaded             =         FIELD(double, 5);
+        torrent->uploaded               =         FIELD(double, 6);
+        torrent->ratio                  =         FIELD(int, 7);
+        torrent->upload_speed           =         FIELD(int, 8);
+        torrent->download_speed         =         FIELD(int, 9);
+        torrent->eta                    =         FIELD(int, 10);
+        torrent->label                  = (char *)FIELD(int, 11);
+        torrent->peers_connected        =         FIELD(int, 12);
+        torrent->peers_in_swarm         =         FIELD(int, 13);
+        torrent->seeds_connected        =         FIELD(int, 14);
+        torrent->seeds_in_swarm         =         FIELD(int, 15);
+        torrent->availability           =         FIELD(double, 16);
+        torrent->torrent_queue_order    =         FIELD(int, 17);
+        torrent->remaining              =         FIELD(double, 18);
+        torrent->torrent_source         = NULL;
+        torrent->rss_feed               = NULL;
+        torrent->status_string          = NULL;
+
+        if (json_object_array_length(index) > 19) {
+            torrent->torrent_source     = (char *)FIELD(string, 19);
+            torrent->rss_feed           = (char *)FIELD(string, 20);
+            torrent->status_string      = (char *)FIELD(string, 21);
+        }
+
+        torrent->next = NULL;
+
+        if (!head)
+            head = torrent;
+
+        if (last)
+            last->next = torrent;
+
+        free(index);
+    }
+
+    free(json);
+
+    return head;
+}
+
+void webui_free_torrent_info(torrent_info *torrents)
+{
+    torrent_info *torrent, *last = NULL;
+    for (torrent = torrents; torrent != NULL; torrent = torrent->next) {
+        free(last);
+        free(torrents->hash);
+        free(torrents->name);
+        free(torrents->label);
+        free(torrents->torrent_source);
+        free(torrents->rss_feed);
+        free(torrents->status_string);
+
+        if (!torrent->next)
+            free(torrent);
+        else
+            last = torrent;
+    }
 }
 
 long perform_request()
