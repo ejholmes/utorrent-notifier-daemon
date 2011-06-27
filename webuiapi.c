@@ -8,9 +8,18 @@
 
 #include "webuiapi.h"
 
+#ifdef DEBUG
 #define DBG(...) fprintf(stderr, __VA_ARGS__)
+#else
+#define DBG(...)
+#endif
 
-#define FIELD(string, i) json_object_get_##string(json_object_array_get_idx(index, i))
+#define FIELD(type, i) json_object_get_##type(json_object_array_get_idx(index, i))
+
+struct write_data {
+    char *data;
+    size_t size;
+};
 
 /* Global struct for holding configuration information */
 static struct {
@@ -36,12 +45,16 @@ char *build_url(int args, ...);
 /* Gets a token from the webui api */
 char *get_token();
 
+torrent_info *copy_torrent_info(torrent_info *torrent);
+
 /* Curl callback functions */
-static size_t get_torrents_write_func(void *buffer, size_t size, size_t nmemb, char **json);
+static size_t get_torrents_write_func(void *buffer, size_t size, size_t nmemb, struct write_data *json);
 static size_t token_write_func(void *buffer, size_t size, size_t nmemb, char **token);
 
 void webui_init(char *uri, char *username, char *password, int port)
 {
+    curl_global_init(CURL_GLOBAL_NOTHING);
+
     cfg.uri      = uri;
     cfg.port     = port;
     cfg.username = username;
@@ -63,10 +76,36 @@ void init_connection()
     curl_easy_setopt(connection, CURLOPT_COOKIEFILE, "");
 }
 
-torrent_info *webui_completed_torrents(torrent_info *current, torrent_info *last)
+torrent_info *webui_completed_torrents(torrent_info *current_list, torrent_info *last_list)
 {
     // TODO: Efficient algorithm for finding completed torrents
-    return NULL;
+    torrent_info *head = NULL, *last = NULL;
+    torrent_info *c, *l;
+
+    /* Iterate through the lists and find any torrents that have completed */
+    for (c = current_list; c != NULL; c = c->next) {
+        for (l = last_list; l != NULL; l = l->next) {
+            if (strcmp(l->hash, c->hash) == 0) {
+                /* Determine if the torrent was downloading in the last set and
+                 * is now done.*/
+                int last_is_downloading = l->status & status_bit_started;
+                int current_is_done = c->status & status_bit_loaded;
+
+                if (last_is_downloading & current_is_done) {
+                    torrent_info *current = copy_torrent_info(c);
+
+                    if (!head)
+                        head = current;
+
+                    if (last)
+                        last->next = current;
+
+                    last = current;
+                }
+            }
+        }
+    }
+    return head;
 }
 
 torrent_info *webui_new_torrents(torrent_info *current, torrent_info *last)
@@ -77,7 +116,11 @@ torrent_info *webui_new_torrents(torrent_info *current, torrent_info *last)
 
 torrent_info *webui_get_torrents()
 {
-    char *json;
+    /* char *json; */
+    struct write_data json = {
+        .data = NULL,
+        .size = 0
+    };
     torrent_info *head = NULL, *last = NULL;
 
     curl_easy_setopt(connection, CURLOPT_URL, build_url(2, "/?list=1&token=", token));
@@ -85,8 +128,10 @@ torrent_info *webui_get_torrents()
     curl_easy_setopt(connection, CURLOPT_WRITEDATA, &json);
     perform_request();
 
+    DBG("DATA: %s\n", json.data);
+
     struct json_object *obj;
-    obj = json_tokener_parse(json);
+    obj = json_tokener_parse(json.data);
     obj = json_object_object_get(obj, "torrents");
 
     int i;
@@ -131,10 +176,12 @@ torrent_info *webui_get_torrents()
         if (last)
             last->next = torrent;
 
+        last = torrent;
+
         free(index);
     }
 
-    free(json);
+    free(json.data);
 
     return head;
 }
@@ -144,18 +191,60 @@ void webui_free_torrent_info(torrent_info *torrents)
     torrent_info *torrent, *last = NULL;
     for (torrent = torrents; torrent != NULL; torrent = torrent->next) {
         free(last);
-        free(torrents->hash);
-        free(torrents->name);
-        free(torrents->label);
-        free(torrents->torrent_source);
-        free(torrents->rss_feed);
-        free(torrents->status_string);
+        free(torrent->hash);
+        free(torrent->name);
+        free(torrent->label);
+        free(torrent->torrent_source);
+        free(torrent->rss_feed);
+        free(torrent->status_string);
 
         if (!torrent->next)
             free(torrent);
         else
             last = torrent;
     }
+}
+
+torrent_info *copy_torrent_info(torrent_info *torrent)
+{
+    torrent_info *copy = (torrent_info *)malloc(sizeof(torrent_info));
+    memcpy(copy, torrent, sizeof(torrent_info));
+
+    copy->hash           = NULL;
+    copy->name           = NULL;
+    copy->label          = NULL;
+    copy->torrent_source = NULL;
+    copy->rss_feed       = NULL;
+    copy->status_string  = NULL;
+    copy->next           = NULL;
+
+    if (torrent->hash) {
+        copy->hash           = (char *)malloc(strlen(torrent->hash) + 1);
+        strcpy(copy->hash, torrent->hash);
+    }
+    if (torrent->name) {
+        copy->name           = (char *)malloc(strlen(torrent->name) + 1);
+        strcpy(copy->name, torrent->name);
+    }
+    if (torrent->label) {
+        copy->label          = (char *)malloc(strlen(torrent->label) + 1);
+        strcpy(copy->label, torrent->label);
+    }
+    if (torrent->torrent_source) {
+        copy->torrent_source = (char *)malloc(strlen(torrent->torrent_source) + 1);
+        strcpy(copy->torrent_source, torrent->torrent_source);
+    }
+    if (torrent->rss_feed) {
+        copy->rss_feed       = (char *)malloc(strlen(torrent->rss_feed) + 1);
+        strcpy(copy->rss_feed, torrent->rss_feed);
+    }
+    if (torrent->status_string) {
+        copy->status_string  = (char *)malloc(strlen(torrent->status_string) + 1);
+        strcpy(copy->status_string, torrent->status_string);
+    }
+
+
+    return copy;
 }
 
 long perform_request()
@@ -185,6 +274,8 @@ char *get_token()
     curl_easy_setopt(connection, CURLOPT_WRITEFUNCTION, token_write_func);
     curl_easy_setopt(connection, CURLOPT_WRITEDATA, &token);
     perform_request();
+    curl_easy_cleanup(connection);
+    init_connection();
     return token;
 }
 
@@ -210,12 +301,12 @@ char *build_url(int args, ...)
     return url;
 }
 
-static size_t get_torrents_write_func(void *buffer, size_t size, size_t nmemb, char **json)
+static size_t get_torrents_write_func(void *buffer, size_t size, size_t nmemb, struct write_data *json)
 {
-    *json = (char *)malloc(nmemb);
-    memcpy(*json, buffer, nmemb);
-    DBG("DATA: %s\n", *json);
-    return nmemb;
+    json->data = (char *)realloc(json->data, (size * nmemb) + json->size);
+    memcpy(&json->data[json->size], buffer, size * nmemb);
+    json->size += size * nmemb;
+    return size * nmemb;
 }
 
 static size_t token_write_func(void *buffer, size_t size, size_t nmemb, char **token)
@@ -226,6 +317,5 @@ static size_t token_write_func(void *buffer, size_t size, size_t nmemb, char **t
     *e = '\0'; /* Terminate the string */
     *token = (char *)malloc(strlen(s)+1);
     strcpy(*token, (const char*)s);
-    DBG("TOKEN: %s\n", *token);
-    return nmemb;
+    return size * nmemb;
 }

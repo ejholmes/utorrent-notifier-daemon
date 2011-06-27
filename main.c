@@ -11,6 +11,15 @@ static const char *username = "";
 static const char *password = "";
 static const char *host = "http://localhost/gui";
 int port = 8080;
+int refresh_interval = 1;
+
+void print_torrent_info(torrent_info *torrents)
+{
+    printf("Torrents: \n");
+    for (torrents = torrents; torrents != NULL; torrents = torrents->next) {
+        printf("%s\n", torrents->name);
+    }
+}
 
 int main(int argc, char *argv[])
 {
@@ -23,6 +32,7 @@ int main(int argc, char *argv[])
             config_lookup_string(config, "password", &password);
             config_lookup_string(config, "host", &host);
             config_lookup_int(config, "port", &port);
+            config_lookup_int(config, "refresh_interval", &refresh_interval);
         }
         else {
             printf("%s\n", config_error_text(config));
@@ -45,10 +55,11 @@ int main(int argc, char *argv[])
         new_torrents = webui_new_torrents(current, last);
         
         // TODO: Send notifications
+        print_torrent_info(completed_torrents);
         
         webui_free_torrent_info(completed_torrents);
         webui_free_torrent_info(new_torrents);
-        sleep(10);
+        sleep(refresh_interval);
     }
 
     return 0;
