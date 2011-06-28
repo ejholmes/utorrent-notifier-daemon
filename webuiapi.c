@@ -15,6 +15,11 @@
 #endif
 
 #define FIELD(type, i) json_object_get_##type(json_object_array_get_idx(index, i))
+#define STRFIELD(field, tmpvar, i) \
+    tmpvar = (char *)FIELD(string, i); \
+    field = (char *)malloc(strlen(tmpvar) + 1); \
+    strcpy(field, tmpvar);
+    
 
 struct write_data {
     char *data;
@@ -163,12 +168,13 @@ torrent_info *webui_get_torrents()
 
     int i;
     for (i = 0; i < json_object_array_length(obj); i++) {
+        char *tmp = NULL;
         json_object *index = json_object_array_get_idx(obj, i);
         torrent_info *torrent = (torrent_info *)malloc(sizeof(torrent_info));
 
-        torrent->hash                   = (char *)FIELD(string, 0);
+        STRFIELD(torrent->hash, tmp, 0);
         torrent->status                 =         FIELD(int, 1);
-        torrent->name                   = (char *)FIELD(string, 2);
+        STRFIELD(torrent->name, tmp, 2);
         torrent->size                   =         FIELD(double, 3);
         torrent->percent_progress       =         FIELD(int, 4);
         torrent->downloaded             =         FIELD(double, 5);
@@ -177,7 +183,7 @@ torrent_info *webui_get_torrents()
         torrent->upload_speed           =         FIELD(int, 8);
         torrent->download_speed         =         FIELD(int, 9);
         torrent->eta                    =         FIELD(int, 10);
-        torrent->label                  = (char *)FIELD(int, 11);
+        STRFIELD(torrent->label, tmp, 11);
         torrent->peers_connected        =         FIELD(int, 12);
         torrent->peers_in_swarm         =         FIELD(int, 13);
         torrent->seeds_connected        =         FIELD(int, 14);
@@ -190,9 +196,9 @@ torrent_info *webui_get_torrents()
         torrent->status_string          = NULL;
 
         if (json_object_array_length(index) > 19) {
-            torrent->torrent_source     = (char *)FIELD(string, 19);
-            torrent->rss_feed           = (char *)FIELD(string, 20);
-            torrent->status_string      = (char *)FIELD(string, 21);
+            STRFIELD(torrent->torrent_source, tmp, 19);
+            STRFIELD(torrent->rss_feed, tmp, 20);
+            STRFIELD(torrent->status_string, tmp, 21);
         }
 
         torrent->next = NULL;
@@ -205,9 +211,9 @@ torrent_info *webui_get_torrents()
 
         last = torrent;
 
-        free(index);
+        json_object_put(index);
     }
-
+    json_object_put(obj);
     free(json.data);
 
     return head;
@@ -215,9 +221,8 @@ torrent_info *webui_get_torrents()
 
 void webui_free_torrent_info(torrent_info *torrents)
 {
-    torrent_info *torrent, *last = NULL;
-    for (torrent = torrents; torrent != NULL; torrent = torrent->next) {
-        free(last);
+    torrent_info *torrent = torrents;
+    while (torrent != NULL) {
         free(torrent->hash);
         free(torrent->name);
         free(torrent->label);
@@ -225,10 +230,9 @@ void webui_free_torrent_info(torrent_info *torrents)
         free(torrent->rss_feed);
         free(torrent->status_string);
 
-        if (!torrent->next)
-            free(torrent);
-        else
-            last = torrent;
+        torrent_info *temp = torrent;
+        torrent = torrent->next;
+        free(temp);
     }
 }
 
@@ -330,7 +334,7 @@ char *build_url(int args, ...)
 
 static size_t get_torrents_write_func(void *buffer, size_t size, size_t nmemb, struct write_data *json)
 {
-    json->data = (char *)realloc(json->data, (size * nmemb) + json->size);
+    json->data = (char *)realloc(json->data, (size * nmemb) + json->size + 1);
     memcpy(&json->data[json->size], buffer, size * nmemb);
     json->size += size * nmemb;
     return size * nmemb;

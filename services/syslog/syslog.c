@@ -5,35 +5,23 @@
 
 #include "service.h"
 
-void syslog_setup(config_setting_t *settings);
-void syslog_new_torrents(const torrent_info *torrents);
-void syslog_completed_torrents(const torrent_info *torrents);
+void syslog_torrent_added(const torrent_info *torrent);
+void syslog_torrent_complete(const torrent_info *torrent);
 
 static struct service_info syslog_service = {
     .name = "Syslog",
     .config_key = "syslog",
-    .setup_fn = syslog_setup,
-    .new_torrents_fn = syslog_new_torrents,
-    .completed_torrents_fn = syslog_completed_torrents
+    .torrent_added = syslog_torrent_added,
+    .torrent_complete = syslog_torrent_complete
 };
 register_service(syslog_service);
 
-void syslog_setup(config_setting_t *settings)
+void syslog_torrent_added(const torrent_info *torrent)
 {
+    syslog(LOG_INFO, "Torrent added %s", torrent->name);
 }
 
-void syslog_new_torrents(const torrent_info *torrents)
+void syslog_torrent_complete(const torrent_info *torrent)
 {
-    const torrent_info *torrent = NULL;
-    for (torrent = torrents; torrent != NULL; torrent = torrent->next) {
-        syslog(LOG_INFO, "Torrent added %s", torrent->name);
-    }
-}
-
-void syslog_completed_torrents(const torrent_info *torrents)
-{
-    const torrent_info *torrent = NULL;
-    for (torrent = torrents; torrent != NULL; torrent = torrent->next) {
-        syslog(LOG_INFO, "Download complete: %s", torrent->name);
-    }
+    syslog(LOG_INFO, "Download complete: %s", torrent->name);
 }

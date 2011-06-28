@@ -7,9 +7,9 @@
 #include "webuiapi.h"
 #include "service.h"
 
-void call_setup_fn(const config_t *config);
-void call_new_torrents_fn(const torrent_info *torrents);
-void call_completed_torrents_fn(const torrent_info *torrents);
+void call_setup_fns(const config_t *config);
+void call_torrent_added_fns(const torrent_info *torrents);
+void call_torrent_complete_fns(const torrent_info *torrents);
 
 static config_t *config = NULL;
 
@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
     }
 
     webui_init(host, username, password, port);
-    call_setup_fn(config);
+    call_setup_fns(config);
     torrent_info *last = NULL;
     torrent_info *current = NULL;
     torrent_info *completed_torrents = NULL;
@@ -56,15 +56,19 @@ int main(int argc, char *argv[])
 
     /* current = webui_get_torrents(); */
     /* webui_free_torrent_info(current); */
+
     while (1) {
         webui_free_torrent_info(last);
         last = current;
         current = webui_get_torrents();
+        print_torrent_info(current);
+        if (!last)
+            continue;
         completed_torrents = webui_completed_torrents(current, last);
         new_torrents = webui_new_torrents(current, last);
         
-        call_new_torrents_fn(new_torrents);
-        call_completed_torrents_fn(completed_torrents);
+        call_torrent_added_fns(new_torrents);
+        call_torrent_complete_fns(completed_torrents);
         
         webui_free_torrent_info(completed_torrents);
         webui_free_torrent_info(new_torrents);

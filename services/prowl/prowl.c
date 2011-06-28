@@ -5,17 +5,17 @@
 #include "service.h"
 
 void prowl_setup(config_setting_t *settings);
-void prowl_new_torrents(const torrent_info *torrents);
-void prowl_completed_torrents(const torrent_info *torrents);
+void prowl_torrent_added(const torrent_info *torrent);
+void prowl_torrent_complete(const torrent_info *torrent);
 
 static void prowl_add_message(char *message);
 
 static struct service_info prowl = {
     .name = "Prowl",
     .config_key = "prowl",
-    .setup_fn = prowl_setup,
-    .new_torrents_fn = prowl_new_torrents,
-    .completed_torrents_fn = prowl_completed_torrents
+    .setup = prowl_setup,
+    .torrent_added  = prowl_torrent_added,
+    .torrent_complete  = prowl_torrent_complete
 };
 register_service(prowl);
 
@@ -27,24 +27,18 @@ void prowl_setup(config_setting_t *settings)
     config_setting_lookup_string(settings, "apikey", &apikey);
 }
 
-void prowl_new_torrents(const torrent_info *torrents)
+void prowl_torrent_added(const torrent_info *torrent)
 {
-    const torrent_info *torrent = NULL;
-    for (torrent = torrents; torrent != NULL; torrent = torrent->next) {
-        char message[1024];
-        sprintf(message, "Torrent added: %s", torrent->name);
-        prowl_add_message(message);
-    }
+    char message[1024];
+    sprintf(message, "Torrent added: %s", torrent->name);
+    prowl_add_message(message);
 }
 
-void prowl_completed_torrents(const torrent_info *torrents)
+void prowl_torrent_complete(const torrent_info *torrent)
 {
-    const torrent_info *torrent = NULL;
-    for (torrent = torrents; torrent != NULL; torrent = torrent->next) {
-        char message[1024];
-        sprintf(message, "Download complete: %s", torrent->name);
-        prowl_add_message(message);
-    }
+    char message[1024];
+    sprintf(message, "Download complete: %s", torrent->name);
+    prowl_add_message(message);
 }
 
 static void prowl_add_message(char *message)
