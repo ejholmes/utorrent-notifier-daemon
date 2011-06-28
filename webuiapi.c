@@ -15,10 +15,12 @@
 #endif
 
 #define FIELD(type, i) json_object_get_##type(json_object_array_get_idx(index, i))
-#define STRFIELD(field, tmpvar, i) \
-    tmpvar = (char *)FIELD(string, i); \
-    field = (char *)malloc(strlen(tmpvar) + 1); \
-    strcpy(field, tmpvar);
+#define STRFIELD(field, i) \
+    { \
+        char *tmp = (char *)FIELD(string, i); \
+        field = (char *)malloc(strlen(tmp) + 1); \
+        strcpy(field, tmp); \
+    }
     
 
 struct write_data {
@@ -65,7 +67,6 @@ void webui_init(char *uri, char *username, char *password, int port)
     cfg.username = username;
     cfg.password = password;
 
-    openlog("utorrent-notifier", LOG_PERROR, LOG_USER);
     init_connection();
 
     token = get_token();
@@ -168,13 +169,12 @@ torrent_info *webui_get_torrents()
 
     int i;
     for (i = 0; i < json_object_array_length(obj); i++) {
-        char *tmp = NULL;
         json_object *index = json_object_array_get_idx(obj, i);
         torrent_info *torrent = (torrent_info *)malloc(sizeof(torrent_info));
 
-        STRFIELD(torrent->hash, tmp, 0);
+        STRFIELD(torrent->hash, 0);
         torrent->status                 =         FIELD(int, 1);
-        STRFIELD(torrent->name, tmp, 2);
+        STRFIELD(torrent->name, 2);
         torrent->size                   =         FIELD(double, 3);
         torrent->percent_progress       =         FIELD(int, 4);
         torrent->downloaded             =         FIELD(double, 5);
@@ -183,7 +183,7 @@ torrent_info *webui_get_torrents()
         torrent->upload_speed           =         FIELD(int, 8);
         torrent->download_speed         =         FIELD(int, 9);
         torrent->eta                    =         FIELD(int, 10);
-        STRFIELD(torrent->label, tmp, 11);
+        STRFIELD(torrent->label, 11);
         torrent->peers_connected        =         FIELD(int, 12);
         torrent->peers_in_swarm         =         FIELD(int, 13);
         torrent->seeds_connected        =         FIELD(int, 14);
@@ -196,9 +196,9 @@ torrent_info *webui_get_torrents()
         torrent->status_string          = NULL;
 
         if (json_object_array_length(index) > 19) {
-            STRFIELD(torrent->torrent_source, tmp, 19);
-            STRFIELD(torrent->rss_feed, tmp, 20);
-            STRFIELD(torrent->status_string, tmp, 21);
+            STRFIELD(torrent->torrent_source, 19);
+            STRFIELD(torrent->rss_feed, 20);
+            STRFIELD(torrent->status_string, 21);
         }
 
         torrent->next = NULL;
