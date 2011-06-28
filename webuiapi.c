@@ -74,6 +74,8 @@ void webui_init(char *uri, char *username, char *password, int port)
 
 void init_connection()
 {
+    if (connection)
+        curl_easy_cleanup(connection);
     connection = curl_easy_init();
     curl_easy_setopt(connection, CURLOPT_URL, cfg.uri);
     curl_easy_setopt(connection, CURLOPT_PORT, cfg.port);
