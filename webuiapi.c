@@ -78,7 +78,6 @@ void init_connection()
 
 torrent_info *webui_completed_torrents(torrent_info *current_list, torrent_info *last_list)
 {
-    // TODO: Efficient algorithm for finding completed torrents
     torrent_info *head = NULL, *last = NULL;
     torrent_info *c, *l;
 
@@ -108,10 +107,38 @@ torrent_info *webui_completed_torrents(torrent_info *current_list, torrent_info 
     return head;
 }
 
-torrent_info *webui_new_torrents(torrent_info *current, torrent_info *last)
+torrent_info *webui_new_torrents(torrent_info *current_list, torrent_info *last_list)
 {
-    // TODO: Efficient algorithm for finding new torrents
-    return NULL;
+    torrent_info *head = NULL, *last = NULL;
+    torrent_info *c, *l;
+
+    /* Don't try to find new torrents when the last listign was NULL */
+    if (!last_list)
+        return NULL;
+
+    /* Iterate through the lists and find any torrents that have completed */
+    for (c = current_list; c != NULL; c = c->next) {
+        int found = 0;
+
+        /* Determine if the current torrent didn't exist in the last refresh */
+        for (l = last_list; l != NULL; l = l->next) {
+            if (strcmp(c->hash, l->hash) == 0)
+                found = 1; /* Torrent existed in last refresh, so it's not new */
+        }
+
+        if (!found) {
+            torrent_info *current = copy_torrent_info(c);
+
+            if (!head)
+                head = current;
+
+            if (last)
+                last->next = current;
+
+            last = current;
+        }
+    }
+    return head;
 }
 
 torrent_info *webui_get_torrents()
@@ -255,10 +282,10 @@ long perform_request()
 
     switch (http_status) {
         case 401:
-            syslog(LOG_PERROR, "401 Authorization denied. Check the username and password.");
+            syslog(LOG_ERR, "401 Authorization denied. Check the username and password.");
             break;
         case 404:
-            syslog(LOG_PERROR, "404 Not found. Check the URL.");
+            syslog(LOG_ERR, "404 Not found. Check the URL.");
             break;
         default:
             break;
@@ -274,8 +301,8 @@ char *get_token()
     curl_easy_setopt(connection, CURLOPT_WRITEFUNCTION, token_write_func);
     curl_easy_setopt(connection, CURLOPT_WRITEDATA, &token);
     perform_request();
-    curl_easy_cleanup(connection);
-    init_connection();
+    /* curl_easy_cleanup(connection); */
+    /* init_connection(); */
     return token;
 }
 

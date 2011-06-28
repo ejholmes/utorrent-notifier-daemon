@@ -1,17 +1,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <syslog.h>
 #include <libconfig.h>
 
 #include "webuiapi.h"
+#include "service.h"
+
+void call_setup_fn(const config_t *config);
+void call_new_torrents_fn(const torrent_info *torrents);
+void call_completed_torrents_fn(const torrent_info *torrents);
 
 static config_t *config = NULL;
 
 static const char *username = "";
 static const char *password = "";
 static const char *host = "http://localhost/gui";
-int port = 8080;
-int refresh_interval = 1;
+static int port = 8080;
+static int refresh_interval = 1;
 
 void print_torrent_info(torrent_info *torrents)
 {
@@ -23,6 +29,8 @@ void print_torrent_info(torrent_info *torrents)
 
 int main(int argc, char *argv[])
 {
+    openlog("utorrent-notifier", LOG_PERROR, LOG_USER);
+
     config = (config_t *)malloc(sizeof(config_t));
     FILE *fp = fopen("/etc/utorrent-notifier", "r");
 
@@ -40,6 +48,7 @@ int main(int argc, char *argv[])
     }
 
     webui_init(host, username, password, port);
+    call_setup_fn(config);
     torrent_info *last = NULL;
     torrent_info *current = NULL;
     torrent_info *completed_torrents = NULL;
@@ -54,13 +63,15 @@ int main(int argc, char *argv[])
         completed_torrents = webui_completed_torrents(current, last);
         new_torrents = webui_new_torrents(current, last);
         
-        // TODO: Send notifications
-        print_torrent_info(completed_torrents);
+        call_new_torrents_fn(new_torrents);
+        call_completed_torrents_fn(completed_torrents);
         
         webui_free_torrent_info(completed_torrents);
         webui_free_torrent_info(new_torrents);
         sleep(refresh_interval);
     }
+
+    closelog();
 
     return 0;
 }
