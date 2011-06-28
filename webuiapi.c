@@ -165,13 +165,13 @@ torrent_info *webui_get_torrents()
 
     DBG("DATA: %s\n", json.data);
 
-    struct json_object *obj;
-    obj = json_tokener_parse(json.data);
-    obj = json_object_object_get(obj, "torrents");
+    struct json_object *root, *torrents;
+    root = json_tokener_parse(json.data);
+    torrents = json_object_object_get(root, "torrents");
 
     int i;
-    for (i = 0; i < json_object_array_length(obj); i++) {
-        json_object *index = json_object_array_get_idx(obj, i);
+    for (i = 0; i < json_object_array_length(torrents); i++) {
+        json_object *index = json_object_array_get_idx(torrents, i);
         torrent_info *torrent = (torrent_info *)malloc(sizeof(torrent_info));
 
         STRFIELD(torrent->hash, 0);
@@ -215,7 +215,8 @@ torrent_info *webui_get_torrents()
 
         json_object_put(index);
     }
-    json_object_put(obj);
+    json_object_put(root);
+    json_object_put(torrents);
     free(json.data);
 
     return head;
