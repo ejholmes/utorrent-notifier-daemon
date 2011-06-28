@@ -38,7 +38,6 @@ static struct {
 
 static CURL *connection = NULL;     /* Handle to the curl connection */
 static char *token = NULL;          /* Our token provided by the webui */
-static char url[2046];              /* Holds the url that build_url populates */
 
 /* Initializes the curle connection */
 void init_connection();
@@ -315,10 +314,11 @@ char *get_token()
 
 char *build_url(int args, ...)
 {
+    static char *url = NULL;
     char *arg = NULL;
     va_list ap;
 
-    memset(url, 0, sizeof(url));
+    url = (char *)realloc(url, strlen(cfg.uri) + 1);
     strcpy(url, cfg.uri);
 
     va_start(ap, args);
@@ -326,6 +326,7 @@ char *build_url(int args, ...)
     int i;
     for (i = 0; i < args; i++) {
         if (arg) {
+            url = (char *)realloc(url, strlen(url) + strlen(arg) + 1);
             strcat(url, arg);
             arg = va_arg(ap, char *);
         }
