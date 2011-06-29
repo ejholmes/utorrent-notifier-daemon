@@ -1,11 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <syslog.h>
 #include <libconfig.h>
 
 #include "webuiapi.h"
 #include "service.h"
+
+#define CONFIG_FILE "/etc/utorrent-notifier.cfg"
 
 void call_setup_fns(const config_t *config);
 void call_torrent_added_fns(const torrent_info *torrents);
@@ -19,20 +23,19 @@ static const char *host = "http://localhost/gui";
 static int port = 8080;
 static int refresh_interval = 1;
 
-void print_torrent_info(torrent_info *torrents)
-{
-    printf("Torrents: \n");
-    for (torrents = torrents; torrents != NULL; torrents = torrents->next) {
-        printf("%s\n", torrents->name);
-    }
-}
+static time_t lastmod = 0;
 
-int main(int argc, char *argv[])
-{
-    openlog("utorrent-notifier", LOG_PERROR, LOG_USER);
+/* void print_torrent_info(torrent_info *torrents) */
+/* { */
+    /* printf("Torrents: \n"); */
+    /* for (torrents = torrents; torrents != NULL; torrents = torrents->next) { */
+        /* printf("%s\n", torrents->name); */
+    /* } */
+/* } */
 
-    config = (config_t *)malloc(sizeof(config_t));
-    FILE *fp = fopen("/etc/utorrent-notifier.cfg", "r");
+void init()
+{
+    FILE *fp = fopen(CONFIG_FILE, "r");
 
     if (fp) {
         if (config_read(config, fp) == CONFIG_TRUE) {
@@ -44,12 +47,37 @@ int main(int argc, char *argv[])
         }
         else {
             printf("Got error while attempting to parse config file: %s\n", config_error_text(config));
-            return -1;
+            exit(-1);
         }
     }
 
+    fclose(fp);
+
     webui_init(host, username, password, port);
     call_setup_fns(config);
+}
+
+void check_modified_config()
+{
+    struct stat file;
+    stat(CONFIG_FILE, &file);
+    if (lastmod == 0)
+        lastmod = file.st_mtime;
+    if (file.st_mtime != lastmod) {
+        lastmod = file.st_mtime;
+        printf("Reloading config file\n");
+        init();
+    }
+}
+
+int main(int argc, char *argv[])
+{
+    openlog("utorrent-notifier", LOG_PERROR, LOG_USER);
+
+    config = (config_t *)malloc(sizeof(config_t));
+
+    init();
+
     torrent_info *last = NULL;
     torrent_info *current = NULL;
     torrent_info *completed_torrents = NULL;
@@ -59,6 +87,7 @@ int main(int argc, char *argv[])
     /* webui_free_torrent_info(current); */
 
     while (1) {
+        check_modified_config();
         current = webui_get_torrents();
         if (!current)
             goto refresh_wait;
