@@ -18,7 +18,7 @@ register_service(syslog_service);
 
 void syslog_torrent_added(const torrent_info *torrent)
 {
-    syslog(LOG_INFO, "Torrent added %s", torrent->name);
+    syslog(LOG_INFO, "Torrent added: %s", torrent->name);
 }
 
 void syslog_torrent_complete(const torrent_info *torrent)
