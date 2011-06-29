@@ -23,11 +23,6 @@
     }
     
 
-struct write_data {
-    char *data;
-    size_t size;
-};
-
 /* Global struct for holding configuration information */
 static struct {
     char *uri;
@@ -54,7 +49,7 @@ char *get_token();
 torrent_info *copy_torrent_info(torrent_info *torrent);
 
 /* Curl callback functions */
-static size_t get_torrents_write_func(void *buffer, size_t size, size_t nmemb, struct write_data *json);
+static size_t get_torrents_write_func(void *buffer, size_t size, size_t nmemb, char **json);
 static size_t token_write_func(void *buffer, size_t size, size_t nmemb, char **token);
 
 void webui_init(char *uri, char *username, char *password, int port)
@@ -73,8 +68,10 @@ void webui_init(char *uri, char *username, char *password, int port)
 
 void init_connection()
 {
-    if (connection)
+    if (connection) {
+        DBG("Cleaning CURL connection\n");
         curl_easy_cleanup(connection);
+    }
     connection = curl_easy_init();
     curl_easy_setopt(connection, CURLOPT_URL, cfg.uri);
     curl_easy_setopt(connection, CURLOPT_PORT, cfg.port);
@@ -151,10 +148,7 @@ torrent_info *webui_new_torrents(torrent_info *current_list, torrent_info *last_
 torrent_info *webui_get_torrents()
 {
     /* char *json; */
-    struct write_data json = {
-        .data = NULL,
-        .size = 0
-    };
+    char *json = NULL;
     torrent_info *head = NULL, *last = NULL;
 
     curl_easy_setopt(connection, CURLOPT_URL, build_url(2, "/?list=1&token=", token));
@@ -162,10 +156,10 @@ torrent_info *webui_get_torrents()
     curl_easy_setopt(connection, CURLOPT_WRITEDATA, &json);
     perform_request();
 
-    DBG("DATA: %s\n", json.data);
+    DBG("DATA: %s\n", json);
 
     struct json_object *root, *torrents;
-    root = json_tokener_parse(json.data);
+    root = json_tokener_parse(json);
     if (!root)
         return NULL;
     torrents = json_object_object_get(root, "torrents");
@@ -220,7 +214,7 @@ torrent_info *webui_get_torrents()
     }
     json_object_put(root);
     json_object_put(torrents);
-    free(json.data);
+    free(json);
 
     return head;
 }
@@ -311,8 +305,7 @@ char *get_token()
     curl_easy_setopt(connection, CURLOPT_WRITEFUNCTION, token_write_func);
     curl_easy_setopt(connection, CURLOPT_WRITEDATA, &token);
     perform_request();
-    /* curl_easy_cleanup(connection); */
-    /* init_connection(); */
+    init_connection();
     return token;
 }
 
@@ -340,11 +333,14 @@ char *build_url(int args, ...)
     return url;
 }
 
-static size_t get_torrents_write_func(void *buffer, size_t size, size_t nmemb, struct write_data *json)
+static size_t get_torrents_write_func(void *buffer, size_t size, size_t nmemb, char **json)
 {
-    json->data = (char *)realloc(json->data, (size * nmemb) + json->size + 1);
-    memcpy(&json->data[json->size], buffer, size * nmemb);
-    json->size += size * nmemb;
+    int current_size = 0;
+    if (*json)
+        current_size = strlen(*json);
+    *json = (char *)realloc(*json, strlen((char *)buffer) + current_size + 1);
+    char *ptr = *json+current_size;
+    strcpy(ptr, (char *)buffer);
     return size * nmemb;
 }
 
