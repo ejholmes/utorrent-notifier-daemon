@@ -91,10 +91,10 @@ torrent_info *webui_completed_torrents(torrent_info *current_list, torrent_info 
             if (strcmp(l->hash, c->hash) == 0) {
                 /* Determine if the torrent was downloading in the last set and
                  * is now done.*/
-                int last_is_downloading = l->status & status_bit_started;
-                int current_is_done = c->status & status_bit_loaded;
+                int last_was_downloading = (l->percent_progress != 1000);
+                int current_is_done = (c->percent_progress == 1000);
 
-                if (last_is_downloading & current_is_done) {
+                if (last_was_downloading & current_is_done) {
                     torrent_info *current = copy_torrent_info(c);
 
                     if (!head)
