@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
     openlog("utorrent-notifier", LOG_PERROR, LOG_USER);
 
     config = (config_t *)malloc(sizeof(config_t));
-    FILE *fp = fopen("/etc/utorrent-notifier", "r");
+    FILE *fp = fopen("/etc/utorrent-notifier.cfg", "r");
 
     if (fp) {
         if (config_read(config, fp) == CONFIG_TRUE) {

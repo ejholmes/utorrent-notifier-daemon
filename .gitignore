@@ -1,3 +1,6 @@
+*.gz
+*.tar
+
 # Compiled Object files
 *.slo
 *.lo
@@ -13,11 +16,13 @@
 
 # http://www.gnu.org/software/automake
 
+Makefile
 Makefile.in
 
 # http://www.gnu.org/software/autoconf
 
-/config.h*
+stamp-*
+config*
 /autom4te.cache
 /aclocal.m4
 /compile
