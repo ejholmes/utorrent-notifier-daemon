@@ -6,7 +6,6 @@ Dependencies: [libconfig](http://www.hyperrealm.com/libconfig/), [libcurl](http:
 
 Install
 -------
-
 Download the most recent source from the downloads page.
 
 ```
