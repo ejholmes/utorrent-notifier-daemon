@@ -24,7 +24,9 @@ static const char *apikey = "";
 
 void prowl_setup(config_setting_t *settings)
 {
-    config_setting_lookup_string(settings, "apikey", &apikey);
+    if (settings) {
+        config_setting_lookup_string(settings, "apikey", &apikey);
+    }
 }
 
 void prowl_torrent_added(const torrent_info *torrent)

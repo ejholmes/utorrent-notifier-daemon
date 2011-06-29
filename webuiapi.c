@@ -166,7 +166,11 @@ torrent_info *webui_get_torrents()
 
     struct json_object *root, *torrents;
     root = json_tokener_parse(json.data);
+    if (!root)
+        return NULL;
     torrents = json_object_object_get(root, "torrents");
+    if (!torrents)
+        return NULL;
 
     int i;
     for (i = 0; i < json_object_array_length(torrents); i++) {

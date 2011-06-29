@@ -58,12 +58,11 @@ int main(int argc, char *argv[])
     /* webui_free_torrent_info(current); */
 
     while (1) {
-        webui_free_torrent_info(last);
-        last = current;
         current = webui_get_torrents();
-        print_torrent_info(current);
-        if (!last)
+        if (!current)
             continue;
+        print_torrent_info(current);
+
         completed_torrents = webui_completed_torrents(current, last);
         new_torrents = webui_new_torrents(current, last);
         
@@ -72,6 +71,9 @@ int main(int argc, char *argv[])
         
         webui_free_torrent_info(completed_torrents);
         webui_free_torrent_info(new_torrents);
+        torrent_info *temp = last;
+        last = current;
+        webui_free_torrent_info(temp);
         sleep(refresh_interval);
     }
 
