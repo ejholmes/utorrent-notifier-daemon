@@ -67,7 +67,6 @@ void send_message(char *message)
     char post[2048];
     sprintf(url, "%s/devices/providers/%s/notifications", uri, apikey);
     sprintf(post, "email=%s&notification[message]=%s", md5email, curl_easy_escape(connection, message, 0));
-    printf("%s\n%s\n", url, post);
     curl_easy_setopt(connection, CURLOPT_URL, url);
     curl_easy_setopt(connection, CURLOPT_POSTFIELDS, post);
     curl_easy_setopt(connection, CURLOPT_WRITEFUNCTION, ignore_result);
