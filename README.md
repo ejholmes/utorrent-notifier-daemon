@@ -6,7 +6,7 @@ Dependencies: [libconfig](http://www.hyperrealm.com/libconfig/), [libcurl](http:
 
 Install
 -------
-Download the most recent source from the downloads page.
+Download the most recent source from the [downloads page](https://github.com/ejholmes/utorrent-notifier-daemon/downloads).
 
 ```
 $ tar xzvf utorrent-notifier-<version>.tar.gz
