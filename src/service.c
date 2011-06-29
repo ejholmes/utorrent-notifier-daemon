@@ -7,11 +7,12 @@
 
 static struct {
     size_t num;
-    struct service_info *services[256];
+    struct service_info **services;
 } svcs;
 
 void add_service(struct service_info *service)
 {
+    svcs.services = (struct service_info **)realloc(svcs.services, sizeof(struct service_info *));
     svcs.services[svcs.num] = service;
     ++svcs.num;
 }
