@@ -43,7 +43,8 @@ int main(int argc, char *argv[])
             config_lookup_int(config, "refresh_interval", &refresh_interval);
         }
         else {
-            printf("%s\n", config_error_text(config));
+            printf("Got error while attempting to parse config file: %s\n", config_error_text(config));
+            return -1;
         }
     }
 
@@ -60,8 +61,8 @@ int main(int argc, char *argv[])
     while (1) {
         current = webui_get_torrents();
         if (!current)
-            continue;
-        print_torrent_info(current);
+            goto refresh_wait;
+        /* print_torrent_info(current); */
 
         completed_torrents = webui_completed_torrents(current, last);
         new_torrents = webui_new_torrents(current, last);
@@ -74,6 +75,7 @@ int main(int argc, char *argv[])
         torrent_info *temp = last;
         last = current;
         webui_free_torrent_info(temp);
+refresh_wait:
         sleep(refresh_interval);
     }
 

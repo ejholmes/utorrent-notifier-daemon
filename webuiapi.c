@@ -62,8 +62,6 @@ void webui_init(char *uri, char *username, char *password, int port)
     cfg.password = password;
 
     init_connection();
-
-    token = get_token();
 }
 
 void init_connection()
@@ -78,6 +76,8 @@ void init_connection()
     curl_easy_setopt(connection, CURLOPT_USERNAME, cfg.username);
     curl_easy_setopt(connection, CURLOPT_PASSWORD, cfg.password);
     curl_easy_setopt(connection, CURLOPT_COOKIEFILE, "");
+
+    token = get_token();
 }
 
 torrent_info *webui_completed_torrents(torrent_info *current_list, torrent_info *last_list)
@@ -154,7 +154,16 @@ torrent_info *webui_get_torrents()
     curl_easy_setopt(connection, CURLOPT_URL, build_url(2, "/?list=1&token=", token));
     curl_easy_setopt(connection, CURLOPT_WRITEFUNCTION, get_torrents_write_func);
     curl_easy_setopt(connection, CURLOPT_WRITEDATA, &json);
-    perform_request();
+    long http_status = perform_request();
+    if (http_status != 200) {
+        switch (http_status) {
+            case 400:
+                init_connection();
+                return webui_get_torrents();
+            default:
+                return NULL;
+        }
+    }
 
     DBG("DATA: %s\n", json);
 
@@ -285,13 +294,22 @@ long perform_request()
     curl_easy_getinfo(connection, CURLINFO_RESPONSE_CODE, &http_status);
 
     switch (http_status) {
+        case 200:
+            break;
+        case 400:
+            syslog(LOG_ERR, "400 Bad Request.");
+            break;
         case 401:
-            syslog(LOG_ERR, "401 Authorization denied. Check the username and password.");
+            syslog(LOG_ERR, "401 Unauthorized. Check the username and password.");
             break;
         case 404:
-            syslog(LOG_ERR, "404 Not found. Check the URL.");
+            syslog(LOG_ERR, "404 Not Found. Check the URL.");
+            break;
+        case 503:
+            syslog(LOG_ERR, "503 Service Unavailable. Check the URL.");
             break;
         default:
+            syslog(LOG_ERR, "Got status code %ld\n", http_status);
             break;
     }
 
@@ -305,7 +323,6 @@ char *get_token()
     curl_easy_setopt(connection, CURLOPT_WRITEFUNCTION, token_write_func);
     curl_easy_setopt(connection, CURLOPT_WRITEDATA, &token);
     perform_request();
-    init_connection();
     return token;
 }
 

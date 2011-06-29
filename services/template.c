@@ -4,12 +4,14 @@
 
 #include "service.h"
 
+void <service name>_setup(config_setting_t *settings);
 void <service name>_torrent_added(const torrent_info *torrent);
 void <service name>_torrent_complete(const torrent_info *torrent);
 
 static struct service_info <service name>_service = {
     .name = "<service name>",
     .config_key = "<service key>",
+    .setup = <service name>_setup,
     .torrent_added = <service name>_torrent_added,
     .torrent_complete = <service name>_torrent_complete
 };

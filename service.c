@@ -20,7 +20,7 @@ void call_setup_fns(const config_t *config)
 {
     int i;
     for (i = 0; i < svcs.num; i++) {
-        int enabled = 0;
+        int enabled = 1;
         config_setting_t *settings = config_lookup(config, svcs.services[i]->config_key);
         if (settings)
             config_setting_lookup_bool(settings, "enabled", &enabled);
