@@ -1,0 +1,20 @@
+#!/sbin/runscript
+# Copyright 1999-2009 Gentoo Foundation
+# Distributed under the terms of the GNU General Public License v2
+# $Header: $
+
+depend() {
+	need net
+}
+
+start() {
+    ebegin "Starting utorrent-notifier"
+    start-stop-daemon --start --background --exec /bin/utorrent-notifier
+    eend $?
+}
+
+stop() {
+	ebegin "Stopping utorrent-notifier"
+    start-stop-daemon --stop --exec /bin/utorrent-notifier
+    eend $?
+}
