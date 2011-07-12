@@ -5,6 +5,7 @@ AC_PREREQ([2.65])
 AC_INIT([utorrent-notifier], [0.1], [eric@ejholmes.net])
 AC_CONFIG_SRCDIR([src])
 AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign])
 AC_PREFIX_DEFAULT([])
 
