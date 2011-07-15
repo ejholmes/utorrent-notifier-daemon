@@ -25,15 +25,7 @@ static int refresh_interval = 1;
 
 static time_t lastmod = 0;
 
-/* void print_torrent_info(torrent_info *torrents) */
-/* { */
-    /* printf("Torrents: \n"); */
-    /* for (torrents = torrents; torrents != NULL; torrents = torrents->next) { */
-        /* printf("%s\n", torrents->name); */
-    /* } */
-/* } */
-
-void init()
+static void init()
 {
     FILE *fp = fopen(CONFIG_FILE, "r");
 
@@ -57,7 +49,7 @@ void init()
     call_setup_fns(config);
 }
 
-void check_modified_config()
+static void check_modified_config()
 {
     struct stat file;
     stat(CONFIG_FILE, &file);

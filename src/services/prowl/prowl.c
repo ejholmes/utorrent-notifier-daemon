@@ -5,43 +5,43 @@
 
 #include "service.h"
 
-void prowl_setup(config_setting_t *settings);
-void prowl_torrent_added(const torrent_info *torrent);
-void prowl_torrent_complete(const torrent_info *torrent);
+static void setup(config_setting_t *settings);
+static void torrent_added(const torrent_info *torrent);
+static void torrent_complete(const torrent_info *torrent);
 
-static void prowl_add_message(char *message);
+static void add_message(char *message);
 
 static struct service_info prowl = {
     .name = "Prowl",
     .config_key = "prowl",
-    .setup = prowl_setup,
-    .torrent_added  = prowl_torrent_added,
-    .torrent_complete  = prowl_torrent_complete
+    .setup = setup,
+    .torrent_added  = torrent_added,
+    .torrent_complete  = torrent_complete
 };
 register_service(prowl);
 
 static const char *addurl = "http://api.prowlapp.com/publicapi/add";
 static const char *apikey = "";
 
-void prowl_setup(config_setting_t *settings)
+static void setup(config_setting_t *settings)
 {
     if (settings != NULL) {
         config_setting_lookup_string(settings, "apikey", &apikey);
     }
 }
 
-void prowl_torrent_added(const torrent_info *torrent)
+static void torrent_added(const torrent_info *torrent)
 {
     char message[1024];
     sprintf(message, "Torrent added: %s", torrent->name);
-    prowl_add_message(message);
+    add_message(message);
 }
 
-void prowl_torrent_complete(const torrent_info *torrent)
+static void torrent_complete(const torrent_info *torrent)
 {
     char message[1024];
     sprintf(message, "Download complete: %s", torrent->name);
-    prowl_add_message(message);
+    add_message(message);
 }
 
 static size_t ignore_result(void *buffer, size_t size, size_t nmemb, void *nothing)
@@ -49,7 +49,7 @@ static size_t ignore_result(void *buffer, size_t size, size_t nmemb, void *nothi
     return size * nmemb;
 }
 
-static void prowl_add_message(char *message)
+static void add_message(char *message)
 {
     CURL *connection = curl_easy_init();
     static char post[2048];

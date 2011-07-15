@@ -6,27 +6,27 @@
 
 #include "service.h"
 
-void boxcar_setup(config_setting_t *settings);
-void boxcar_torrent_added(const torrent_info *torrent);
-void boxcar_torrent_complete(const torrent_info *torrent);
+static void setup(config_setting_t *settings);
+static void torrent_added(const torrent_info *torrent);
+static void torrent_complete(const torrent_info *torrent);
 
-void send_message(char *message);
+static void send_message(char *message);
 
-static struct service_info boxcar_service = {
+static struct service_info service = {
     .name = "Boxcar",
     .config_key = "boxcar",
-    .setup = boxcar_setup,
-    .torrent_added = boxcar_torrent_added,
-    .torrent_complete = boxcar_torrent_complete
+    .setup = setup,
+    .torrent_added = torrent_added,
+    .torrent_complete = torrent_complete
 };
-register_service(boxcar_service);
+register_service(service);
 
 static const char *uri = "http://boxcar.io";
 static const char *apikey = "";
 static const char *email = "";
 static char md5email[MD5_DIGEST_LENGTH * 2 + 1];
 
-void boxcar_setup(config_setting_t *settings)
+static void setup(config_setting_t *settings)
 {
     if (settings != NULL) {
         config_setting_lookup_string(settings, "apikey", &apikey);
@@ -41,14 +41,14 @@ void boxcar_setup(config_setting_t *settings)
     }
 }
 
-void boxcar_torrent_added(const torrent_info *torrent)
+static void torrent_added(const torrent_info *torrent)
 {
     char message[2048];
     sprintf(message, "Torrent added: %s", torrent->name);
     send_message(message);
 }
 
-void boxcar_torrent_complete(const torrent_info *torrent)
+static void torrent_complete(const torrent_info *torrent)
 {
     char message[2048];
     sprintf(message, "Torrent complete: %s", torrent->name);
@@ -60,7 +60,7 @@ static size_t ignore_result(void *buffer, size_t size, size_t nmemb, void *nothi
     return size * nmemb;
 }
 
-void send_message(char *message)
+static void send_message(char *message)
 {
     CURL *connection = curl_easy_init();
     char url[2048];

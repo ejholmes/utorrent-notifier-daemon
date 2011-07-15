@@ -35,18 +35,18 @@ static CURL *connection = NULL;     /* Handle to the curl connection */
 static char *token = NULL;          /* Our token provided by the webui */
 
 /* Initializes the curle connection */
-void init_connection();
+static void init_connection();
 
 /* Performs an http request and returns the HTTP Status */
-long perform_request();
+static long perform_request();
 
 /* Helper for building a url to an api resource */
-char *build_url(int args, ...);
+static char *build_url(int args, ...);
 
 /* Gets a token from the webui api */
-char *get_token();
+static char *get_token();
 
-torrent_info *copy_torrent_info(torrent_info *torrent);
+static torrent_info *copy_torrent_info(torrent_info *torrent);
 
 /* Curl callback functions */
 static size_t get_torrents_write_func(void *buffer, size_t size, size_t nmemb, char **json);
@@ -64,7 +64,7 @@ void webui_init(char *uri, char *username, char *password, int port)
     init_connection();
 }
 
-void init_connection()
+static void init_connection()
 {
     if (connection) {
         DBG("Cleaning CURL connection\n");
@@ -245,7 +245,7 @@ void webui_free_torrent_info(torrent_info *torrents)
     }
 }
 
-torrent_info *copy_torrent_info(torrent_info *torrent)
+static torrent_info *copy_torrent_info(torrent_info *torrent)
 {
     torrent_info *copy = (torrent_info *)malloc(sizeof(torrent_info));
     memcpy(copy, torrent, sizeof(torrent_info));
@@ -287,7 +287,7 @@ torrent_info *copy_torrent_info(torrent_info *torrent)
     return copy;
 }
 
-long perform_request()
+static long perform_request()
 {
     curl_easy_perform(connection);
     long http_status = 0;
@@ -316,7 +316,7 @@ long perform_request()
     return http_status;
 }
 
-char *get_token()
+static char *get_token()
 {
     char *token = NULL;
     curl_easy_setopt(connection, CURLOPT_URL, build_url(1, "/token.html"));
@@ -326,7 +326,7 @@ char *get_token()
     return token;
 }
 
-char *build_url(int args, ...)
+static char *build_url(int args, ...)
 {
     static char *url = NULL;
     char *arg = NULL;
