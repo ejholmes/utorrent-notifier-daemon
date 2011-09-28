@@ -93,9 +93,8 @@ int main(int argc, char *argv[])
         
         webui_free_torrent_info(completed_torrents);
         webui_free_torrent_info(new_torrents);
-        torrent_info *temp = last;
+        webui_free_torrent_info(last);
         last = current;
-        webui_free_torrent_info(temp);
 refresh_wait:
         sleep(refresh_interval);
     }
